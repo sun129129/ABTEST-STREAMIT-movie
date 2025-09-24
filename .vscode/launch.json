@@ -1,0 +1,10 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    { "name": "API (uvicorn)", "type": "python", "request": "launch",
+      "module": "uvicorn", "args": ["app.main:app","--reload","--port","8000"],
+      "console": "integratedTerminal" },
+    { "name": "Streamlit UI", "type": "python", "request": "launch",
+      "module": "streamlit", "args": ["run","client/app.py"] }
+  ]
+}

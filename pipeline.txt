@@ -1,0 +1,73 @@
+
+## 전체 아키텍처(데이터 흐름)
+
+┌──────────────────────────┐
+│      사용자 / 브라우저    │
+│   (Streamlit Frontend)   │
+└─────────────┬────────────┘
+              │  ① /choose (user_id, context)
+              ▼
+      ┌───────────────┐
+      │  Policy API   │  FastAPI
+      │ (MAB Controller│—Thompson/UCB
+      └──────┬────────┘
+             │  ② arm 선택
+   ┌─────────┴───────────┐
+   ▼                     ▼
+┌───────┐            ┌────────┐
+│Variant│ A          │Variant │ B        ... (팔 확장)
+│(전략) │            │(전략)  │
+└───┬───┘            └───┬────┘
+    │  ③ 결과(아이템 목록)     │
+    └───────────┬─────────────┘
+                ▼
+      ┌───────────────────┐
+      │  Streamlit UI     │  ④ 노출 & 사용자 선택
+      └─────────┬─────────┘
+                │  ⑤ /update (arm, reward, meta)
+                ▼
+      ┌───────────────────┐
+      │  Policy API       │  ⑥ α/β 업데이트
+      │  + MLflow Logging │  ⑦ run 기록(arm, reward, etc.)
+      └───────────────────┘
+
+(오프라인 분석)
+Streamlit/사용자 이벤트 → MLflow 로그 → 분석 스크립트/대시보드에서
+arm별 CTR/트래픽/추이 집계 및 시각화
+
+
+
+## 시퀀스(시간 순) 다이어그램
+사용자      UI(Streamlit)      Policy(MAB)             Variant A/B        MLflow
+ |               |                  |                       |                |
+ |  클릭          |                  |                       |                |
+ |-------------->| /choose          |                       |                |
+ |               |----------------->| choose()              |                |
+ |               |                  |→ arm 샘플링           |                |
+ |               |                  |----call-------------->| serve()        |
+ |               |                  |<---items--------------|                |
+ |               |<-----------------| items + arm           |                |
+ |  목록 노출     |                  |                       |                |
+ |  항목 선택     |                  |                       |                |
+ |-------------->| /update          |                       |                |
+ |               |----------------->| update(arm,reward)    |                |
+ |               |                  | α/β 갱신              |                |
+ |               |                  |----------log--------->|  run 저장      |
+ |               |<-----------------| {ok}                  |                |
+
+
+
+## 컴포넌트/ 배포 뷰(개발/운영 관점)
+[Dev Laptop / Server]
+┌───────────────────────────────────────────────────────────┐
+│  Streamlit (client/app.py)  : 8501                        │
+│  FastAPI (app/main.py)      : 8000                        │
+│  MLflow Server              : 5000                        │
+│  데이터: data/sample_items.csv (MovieLens 타이틀)          │
+│  분석: analysis/dashboard.py, analyze_mlflow.py           │
+└───────────────────────────────────────────────────────────┘
+
+(확장)
+- Docker Compose: api/ui/mlflow 컨테이너로 분리
+- K8s: bandit-policy(Deployment) / variants(Deployment) / MLflow(Service)
+- 모니터링: MLflow(실험), Prometheus/Grafana(시스템), 로그(Loki)
