@@ -31,7 +31,7 @@ graph TD
     A[사용자/브라우저<br/>Streamlit Frontend] --> B[Policy API<br/>FastAPI MAB Controller]
     B --> C[Variant A<br/>전략]
     B --> D[Variant B<br/>전략]
-    C --> E[Streamlit UI<br/>노출 & 사용자 선택]
+    C --> E[Streamlit backend UI<br/>노출 & 사용자 선택]
     D --> E
     E --> F[Policy API<br/>+ MLflow Logging]
     F --> G[MLflow<br/>실험 기록]
@@ -46,6 +46,28 @@ graph TD
 5. **⑤ /update (arm, reward, meta)** - 사용자 클릭 피드백 전송
 6. **⑥ α/β 업데이트** - MAB 파라미터 업데이트
 7. **⑦ run 기록(arm, reward, etc.)** - MLflow에 실험 결과 기록
+
+
+## 시퀀스 다이어그램
+
+```
+사용자      UI(Streamlit)      Policy(MAB)           Variant A/B         MLflow
+  |              |                  |                    |                 |
+  |  클릭        |                  |                    |                 |
+  |------------> | /choose          |                    |                 |
+  |              |----------------->| choose()           |                 |
+  |              |                  | arm 샘플링         |                 |
+  |              |                  | ----call---------> | serve()         |
+  |              |                  | <---items----------|                 |
+  |              |<-----------------| items + arm        |                 |
+  |  목록 노출    |                  |                    |                 |
+  |  항목 선택    |                  |                    |                 |
+  |------------> | /update          |                    |                 |
+  |              |----------------->| update(arm,reward) |                 |
+  |              |                  | α/β 갱신           |                 |
+  |              |                  | --------log------->| run 저장        |
+  |              |<-----------------| {ok}               |                 |
+```
 
 ## 🖥️ 컴포넌트 구성
 
